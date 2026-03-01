@@ -23,6 +23,8 @@ const level: Level = {
   ],
 };
 
+const DEFAULT_COLOR = level.endpoints[0]?.color || null
+
 function createInitialGrid(): Grid {
   const grid: Grid = Array.from({ length: level.size }, () =>
     Array.from({ length: level.size }, () => ({ color: null }))
@@ -36,12 +38,9 @@ function createInitialGrid(): Grid {
 
 export default function App() {
   const [grid, setGrid] = useState(createInitialGrid());
-  const boardRef = useRef<View>(null);
-  const [boardLayout, setBoardLayout] = useState({ x: 0, y: 0 });
-
   // Refs to handle the logic without closure staleness
   const gridRef = useRef(grid);
-  const activeColorRef = useRef(null);
+  const activeColorRef = useRef(DEFAULT_COLOR);
   const lastCellRef = useRef(null);
   const [won,setWon] = useState(false)
 
@@ -53,10 +52,38 @@ export default function App() {
   const reset = () => {
     const newGrid = createInitialGrid();
     updateGridState(newGrid);
-    activeColorRef.current = null;
+    activeColorRef.current = DEFAULT_COLOR;
     lastCellRef.current = null;
     setWon(false)
   };
+
+  const handleCellTap = (row: number, col: number) => {
+  const cell = grid[row][col]
+
+  // let colorToUse = cell.color
+
+  // // If cell is empty, assign a new color (e.g., from a palette or a default)
+  // if (!colorToUse) {
+  //   colorToUse = "#3498db" // Default or pick from palette
+  // }
+
+  // setActiveColor(colorToUse)
+  // activeColorRef.current = colorToUse
+
+  // setLastCell({ row, col })
+
+  // Paint tapped cell immediately
+  // setGrid((prev) => {
+    
+    const newGrid = gridRef.current.map((r) => r.map((c) => ({ ...c })))
+    newGrid[row][col].color = activeColorRef.current
+       if (checkWin(newGrid, level)) {
+    setWon(true);
+  }
+
+updateGridState(newGrid)
+  // })
+}
 
   const panResponder = useRef(
     PanResponder.create({
@@ -67,14 +94,14 @@ export default function App() {
         const { pageX, pageY } = e.nativeEvent;
       const row = Math.floor(e.nativeEvent.locationY / CELL_SIZE)
       const col = Math.floor(e.nativeEvent.locationX / CELL_SIZE)
-        console.log("in",row, col)
+    
 
         if (row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE) {
           const cell = gridRef.current[row][col];
-          // Only start drawing if we touch an endpoint
-           console.log("endpoint",cell.endpointId)
-          if (cell.color) {
-            console.log("endpoint2",cell.endpointId)
+    
+         if(!cell.color) handleCellTap(row, col)
+          else {
+    
             activeColorRef.current = cell.color;
             lastCellRef.current = { row, col };
           }
@@ -82,7 +109,7 @@ export default function App() {
       },
 
       onPanResponderMove: (e) => {
-        console.log("activeColor",activeColorRef,lastCellRef)
+    
         if (!activeColorRef.current || !lastCellRef.current || won) return;
 
         const { pageX, pageY } = e.nativeEvent;
@@ -115,12 +142,9 @@ export default function App() {
       },
 
       onPanResponderRelease: () => {
-        activeColorRef.current = null;
+
         lastCellRef.current = null;
-        // Check for win condition
-  // if (checkWin(gridRef.current, level)) {
-  //   setWon(true);
-  // }
+
       },
     })
   ).current;
@@ -133,7 +157,7 @@ export default function App() {
 
   function checkWin(newGrid: Grid,level): boolean {
   const solution = solveLevel(newGrid ,level)
-  console.log("solution",solution)
+
   return solution
   // if (!solution) return false
 
@@ -147,13 +171,6 @@ export default function App() {
       <Text style={styles.title}>Connect the Dots</Text>
       
       <View
-        ref={boardRef}
-        onLayout={(event) => {
-          // Measure where the board is on the screen for coordinate math
-          boardRef.current?.measure((x, y, width, height, pageX, pageY) => {
-            setBoardLayout({ x: pageX, y: pageY });
-          });
-        }}
         style={styles.board}
         {...panResponder.panHandlers}
       >
@@ -254,3 +271,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+
